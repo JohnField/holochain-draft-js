@@ -1,3 +1,5 @@
+
+# draft.js
 static/
 dist/
 lib/
@@ -7,3 +9,8 @@ website/src/docs/
 npm-debug.log
 !website/static/
 yarn-error.log
+
+# Holochain
+# Agent-specific.
+agent.txt
+priv.key
