@@ -1,4 +1,3 @@
-
 <!--
 Copyright (c) 2013-present, Facebook, Inc. All rights reserved.
 
@@ -14,27 +13,34 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 -->
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Draft • Rich Text</title>
-    <link rel="stylesheet" href="dist/Draft.css" />
-    <link rel="stylesheet" href="richEditor.css" />
-    <style>
-      #target { width: 600px; }
-    </style>
-  </head>
-  <body>
-    <div id="target"></div>
-    <script src="node_modules/react/umd/react.development.js"></script>
-    <script src="node_modules/react-dom/umd/react-dom.development.js"></script>
-    <script src="node_modules/immutable/dist/immutable.js"></script>
-    <script src="node_modules/es6-shim/es6-shim.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.js"></script>
-    <script src="dist/Draft.js"></script>
-    <script type="text/babel">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Draft • Rich Text</title>
+  <link rel="stylesheet" href="dist/Draft.css" />
+  <link rel="stylesheet" href="richEditor.css" />
+  <style>
+    #target {
+      width: 600px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="target"></div>
+  <!-- holochain -->
+  <script src="holoChain.js"></script>
+  <!-- draft-js -->
+  <script src="node_modules/react/umd/react.development.js"></script>
+  <script src="node_modules/react-dom/umd/react-dom.development.js"></script>
+  <script src="node_modules/immutable/dist/immutable.js"></script>
+  <script src="node_modules/es6-shim/es6-shim.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.js"></script>
+  <script src="dist/Draft.js"></script>
+  <script type="text/babel">
       'use strict';
 
-      const {Editor, EditorState, RichUtils} = Draft;
+      const {Editor, EditorState, RichUtils,convertToRaw,convertFromRaw} = Draft;
 
       class RichEditorExample extends React.Component {
         constructor(props) {
@@ -48,6 +54,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           this.onTab = (e) => this._onTab(e);
           this.toggleBlockType = (type) => this._toggleBlockType(type);
           this.toggleInlineStyle = (style) => this._toggleInlineStyle(style);
+
+          // Holochain
+          this.holoCreate = (e) => this._holoCreate(e);
+          this.holoRead = (e) => this._holoRead(e);
         }
 
         _handleKeyCommand(command) {
@@ -83,6 +93,41 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           );
         }
 
+        _holoCreate(e) {
+          e.preventDefault();
+          // Take editor content and save to chain.
+
+          const contentState = this.state.editorState.getCurrentContent();
+          const contentRaw = convertToRaw(contentState);
+          alert(JSON.stringify(contentState));
+          const jsonEntry = { content: JSON.stringify(contentState), timestamp: Date.now() };
+
+          jsonEntryCreate(
+            jsonEntry,
+            function (hash) {
+                document.getElementById('holochain-hash').value = hash;
+                document.getElementById('holochain-timestamp').value = new Date(jsonEntry.timestamp).toString();
+            })
+        }
+
+        _holoRead(e) {
+            e.preventDefault();
+            // Read the hash and restore in editor.
+            const hash = document.getElementById('holochain-hash').value;
+            if (!hash){
+              alert('No Hash provided - need to Write first');
+            }
+            let contentState
+            jsonEntryRead(hash, function (res) {
+                var jsonEntry = JSON.parse(res);
+                alert(jsonEntry.content);
+                const contentRaw = JSON.parse(jsonEntry.content);
+                contentState = contentRaw; //convertFromRaw(contentRaw);
+                this.state.editorState = EditorState.createWithContent(contentState);
+                document.getElementById('holochain-timestamp').value = new Date(jsonEntry.timestamp).toString();
+            })
+        }
+
         render() {
           const {editorState} = this.state;
 
@@ -97,6 +142,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           }
 
           return (
+          <div>
             <div className="RichEditor-root">
               <BlockStyleControls
                 editorState={editorState}
@@ -120,9 +166,29 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 />
               </div>
             </div>
-          );
+            <div className="Holochain-root">
+              <div className="holo-create">
+                <button onClick={this.holoCreate}>
+                Write
+                </button>
+              </div>
+              <div className="holo-read">
+                  <button onClick={this.holoRead}>
+                Read</button>
+              </div>
+                <label >
+                  Hash:
+                  <input id="holochain-hash" type="text" value="" />
+                </label>
+                <label>
+                  Timestamp:
+                  <input id="holochain-timestamp"  type="text" value="" readOnly />
+                </label>
+                </div>
+              </div>
+            );
+          }
         }
-      }
 
       // Custom overrides for "code" style.
       const styleMap = {
@@ -229,7 +295,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         document.getElementById('target')
       );
     </script>
-  </body>
+</body>
+
 </html>
 <html>
-
